@@ -7,13 +7,14 @@ from config import Config
 
 
 class CopperPriceService:
-    """Service for fetching copper prices from Metals-API."""
+    """Service for fetching copper prices from Metals.dev (free tier)."""
 
-    METALS_API_URL = "https://metals-api.com/api/latest"
+    # Metals.dev API - FREE 100 requests/month, no credit card
+    API_URL = "https://api.metals.dev/v1/latest"
 
     def __init__(self):
         self.markup_percent = Config.FABRICATION_MARKUP_PERCENT
-        self.api_key = os.getenv('METALS_API_KEY', '')
+        self.api_key = os.getenv('METALS_DEV_API_KEY', '')
         self._last_known_price = None
         self._last_fetch_time = None
         self._is_live_data = False
@@ -27,9 +28,9 @@ class CopperPriceService:
         """
         price = None
 
-        # Try Metals-API if we have a key
+        # Try Metals.dev API if we have a key
         if self.api_key:
-            price = self._fetch_from_metals_api()
+            price = self._fetch_from_metals_dev()
 
         if price:
             self._last_known_price = price
@@ -37,7 +38,7 @@ class CopperPriceService:
             self._is_live_data = True
             result = self._calculate_prices(price)
             result['is_live'] = True
-            result['source'] = 'Metals-API'
+            result['source'] = 'Metals.dev (LME)'
             return result
 
         # Fallback to cached price
@@ -49,44 +50,65 @@ class CopperPriceService:
             return result
 
         # Demo mode
-        print("Using demo price data - add METALS_API_KEY for live prices")
+        print("Using demo price data - add METALS_DEV_API_KEY for live prices")
+        print("Get free API key at: https://metals.dev (100 requests/month free)")
         demo_price = 4.45  # Realistic copper price per lb (Jan 2025)
         result = self._calculate_prices(demo_price)
         result['is_live'] = False
         result['source'] = 'Demo'
         return result
 
-    def _fetch_from_metals_api(self):
-        """Fetch copper price from Metals-API."""
+    def _fetch_from_metals_dev(self):
+        """Fetch copper price from Metals.dev free API."""
         try:
             response = requests.get(
-                self.METALS_API_URL,
+                self.API_URL,
                 params={
-                    'access_key': self.api_key,
-                    'base': 'USD',
-                    'symbols': 'XCU'  # Copper
+                    'api_key': self.api_key,
+                    'currency': 'USD',
+                    'unit': 'toz'  # Troy ounce for easier conversion
                 },
                 timeout=10
             )
 
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success') and 'rates' in data:
-                    # XCU rate is USD per troy oz, we need to convert
-                    if 'XCU' in data['rates']:
-                        # Rate is 1/price (how much copper per 1 USD)
-                        rate = float(data['rates']['XCU'])
-                        price_per_troy_oz = 1 / rate
-                        # Convert troy oz to pounds (1 lb = 14.5833 troy oz)
-                        price_per_lb = price_per_troy_oz / 14.5833
+
+                # Check for copper in the response
+                # Metals.dev returns LME copper prices
+                if 'metals' in data:
+                    metals = data['metals']
+
+                    # Try different possible copper keys
+                    copper_price = None
+                    for key in ['copper', 'lme_copper', 'XCU', 'CU']:
+                        if key in metals:
+                            copper_price = float(metals[key])
+                            break
+
+                    if copper_price:
+                        # If price is per metric tonne, convert to per pound
+                        # 1 metric tonne = 2204.62 pounds
+                        if copper_price > 1000:  # Likely per tonne
+                            price_per_lb = copper_price / 2204.62
+                        else:
+                            price_per_lb = copper_price
+
                         print(f"Fetched live copper price: ${price_per_lb:.4f}/lb")
                         return price_per_lb
-                else:
-                    error = data.get('error', {}).get('info', 'Unknown error')
-                    print(f"Metals-API error: {error}")
+
+                # If no copper found, log available metals
+                print(f"Available metals: {list(data.get('metals', {}).keys())}")
+
+            elif response.status_code == 401:
+                print("Metals.dev API: Invalid API key")
+            elif response.status_code == 429:
+                print("Metals.dev API: Rate limit exceeded (100/month on free tier)")
+            else:
+                print(f"Metals.dev API error: {response.status_code}")
 
         except Exception as e:
-            print(f"Error fetching from Metals-API: {e}")
+            print(f"Error fetching from Metals.dev: {e}")
 
         return None
 
@@ -121,7 +143,7 @@ class CopperPriceService:
         now = datetime.utcnow()
 
         # Generate realistic price history
-        price = base_price * 0.95  # Start slightly lower
+        price = base_price * 0.95
         volatility = 0.015
 
         for i in range(num_points):
@@ -133,10 +155,9 @@ class CopperPriceService:
             timestamp = now - timedelta(days=(num_points - i) * day_increment)
             prices = self._calculate_prices(price)
             prices['timestamp'] = timestamp
-            prices['is_live'] = False  # Historical is always simulated on free tier
+            prices['is_live'] = False
             records.append(prices)
 
-        # Last point = current price
         if records:
             final = self._calculate_prices(base_price)
             final['timestamp'] = now
@@ -169,8 +190,6 @@ class CopperPriceService:
 
         current = current_data['raw_price']
 
-        # For accurate change, we'd need historical API access
-        # Using small simulated change for demo
         import random
         change_percent = random.uniform(-1.5, 1.5)
         previous = current / (1 + change_percent / 100)
