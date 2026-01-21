@@ -103,7 +103,7 @@ async function fetchCurrentPrice() {
 
         if (data.error) {
             console.error('Error fetching price:', data.error);
-            showError('Unable to fetch price data from Yahoo Finance. Markets may be closed or there may be a connection issue.');
+            showError('Unable to fetch price data. Please check your API key configuration.');
             document.getElementById('last-updated').textContent = 'Error loading data';
             return;
         }
@@ -115,6 +115,12 @@ async function fetchCurrentPrice() {
         document.getElementById('raw-price').textContent = '$' + data.raw_price.toFixed(4);
         document.getElementById('sheet-price').textContent = '$' + data.sheet_price.toFixed(4);
         document.getElementById('coil-price').textContent = '$' + data.coil_price.toFixed(4);
+
+        // Show data source indicator
+        const sourceIndicator = data.is_live
+            ? '<span class="badge bg-success ms-2">LIVE</span>'
+            : '<span class="badge bg-warning ms-2">DEMO</span>';
+        document.getElementById('data-source').innerHTML = data.source + sourceIndicator;
 
         // Update change info
         if (data.change) {
