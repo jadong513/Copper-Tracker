@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copper Price Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">Copper Price Tracker</span>
+            <span class="navbar-text" id="last-updated">Loading...</span>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Alert Banner -->
+        <div id="alert-banner" class="alert alert-warning alert-dismissible fade show d-none" role="alert">
+            <strong>Price Alert!</strong> <span id="alert-message"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Price Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card price-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Raw Copper (COMEX)</h6>
+                        <h2 class="card-title" id="raw-price">--</h2>
+                        <p class="card-text" id="raw-change">per lb</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card price-card highlight">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">16oz Flat Sheet</h6>
+                        <h2 class="card-title" id="sheet-price">--</h2>
+                        <p class="card-text" id="sheet-info">per sq ft (estimated)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card price-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Coil Price</h6>
+                        <h2 class="card-title" id="coil-price">--</h2>
+                        <p class="card-text" id="coil-info">per lb (estimated)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Price Change -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-muted">Daily Change:</span>
+                                <span id="price-change" class="ms-2 fs-5">--</span>
+                                <span id="price-change-percent" class="ms-1">--</span>
+                            </div>
+                            <div>
+                                <span class="text-muted">Previous Close:</span>
+                                <span id="previous-close" class="ms-2">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Price History</h5>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-sm period-btn" data-period="1d">1D</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm period-btn" data-period="5d">5D</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm period-btn active" data-period="1mo">1M</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm period-btn" data-period="3mo">3M</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm period-btn" data-period="6mo">6M</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm period-btn" data-period="1y">1Y</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="priceChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Price Alerts</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="alert-form" class="mb-3">
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <select class="form-select" id="alert-type" required>
+                                        <option value="raw">Raw Copper</option>
+                                        <option value="sheet">Sheet Price</option>
+                                        <option value="coil">Coil Price</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select" id="alert-condition" required>
+                                        <option value="above">Above</option>
+                                        <option value="below">Below</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="number" class="form-control" id="alert-threshold"
+                                           placeholder="$0.00" step="0.01" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-primary w-100">Add</button>
+                                </div>
+                            </div>
+                        </form>
+                        <ul class="list-group" id="alerts-list">
+                            <li class="list-group-item text-muted">No alerts configured</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Fabrication Markup (%)</label>
+                            <input type="number" class="form-control" id="markup-percent" value="35" disabled>
+                            <small class="text-muted">Applied to raw copper price for sheet/coil estimates</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Auto-refresh Interval</label>
+                            <select class="form-select" id="refresh-interval">
+                                <option value="30000">30 seconds</option>
+                                <option value="60000" selected>1 minute</option>
+                                <option value="300000">5 minutes</option>
+                                <option value="0">Manual only</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-outline-primary" id="refresh-btn">Refresh Now</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer mt-4 py-3 bg-light">
+        <div class="container text-center">
+            <span class="text-muted">Data source: COMEX Copper Futures (HG=F) via Yahoo Finance</span>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

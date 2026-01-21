@@ -1,0 +1,94 @@
+/* Copper Price Tracker Styles */
+
+body {
+    background-color: #f8f9fa;
+}
+
+.price-card {
+    transition: transform 0.2s;
+}
+
+.price-card:hover {
+    transform: translateY(-2px);
+}
+
+.price-card.highlight {
+    border-color: #b87333;
+    border-width: 2px;
+}
+
+.price-card .card-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.price-card.highlight .card-title {
+    color: #b87333;
+}
+
+.price-up {
+    color: #28a745 !important;
+}
+
+.price-down {
+    color: #dc3545 !important;
+}
+
+.badge-up {
+    background-color: #28a745;
+}
+
+.badge-down {
+    background-color: #dc3545;
+}
+
+#priceChart {
+    max-height: 400px;
+}
+
+.alert-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alert-item.inactive {
+    opacity: 0.5;
+}
+
+.alert-item .alert-info {
+    flex-grow: 1;
+}
+
+.alert-item .alert-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.period-btn.active {
+    background-color: #b87333;
+    border-color: #b87333;
+    color: white;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+.loading {
+    opacity: 0.5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .price-card .card-title {
+        font-size: 1.8rem;
+    }
+}
