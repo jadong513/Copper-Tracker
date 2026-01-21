@@ -82,6 +82,19 @@ function initChart() {
     });
 }
 
+// Show/hide error banner
+function showError(message) {
+    const banner = document.getElementById('error-banner');
+    const errorMsg = document.getElementById('error-message');
+    errorMsg.textContent = message;
+    banner.classList.remove('d-none');
+}
+
+function hideError() {
+    const banner = document.getElementById('error-banner');
+    banner.classList.add('d-none');
+}
+
 // Fetch current price
 async function fetchCurrentPrice() {
     try {
@@ -90,8 +103,13 @@ async function fetchCurrentPrice() {
 
         if (data.error) {
             console.error('Error fetching price:', data.error);
+            showError('Unable to fetch price data from Yahoo Finance. Markets may be closed or there may be a connection issue.');
+            document.getElementById('last-updated').textContent = 'Error loading data';
             return;
         }
+
+        // Hide error banner on success
+        hideError();
 
         // Update price displays
         document.getElementById('raw-price').textContent = '$' + data.raw_price.toFixed(4);
@@ -122,6 +140,8 @@ async function fetchCurrentPrice() {
 
     } catch (error) {
         console.error('Error fetching current price:', error);
+        showError('Network error. Please check your connection and try again.');
+        document.getElementById('last-updated').textContent = 'Connection error';
     }
 }
 

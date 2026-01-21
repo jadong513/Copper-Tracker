@@ -11,6 +11,7 @@ class CopperPriceService:
     def __init__(self):
         self.symbol = Config.COPPER_SYMBOL
         self.markup_percent = Config.FABRICATION_MARKUP_PERCENT
+        self._last_known_price = None
 
     def get_current_price(self):
         """
@@ -21,17 +22,32 @@ class CopperPriceService:
         """
         try:
             ticker = yf.Ticker(self.symbol)
-            data = ticker.history(period='1d')
+            # Try 5d period for more reliable data
+            data = ticker.history(period='5d')
 
             if data.empty:
+                print(f"No data returned for {self.symbol}, trying fallback...")
+                # Try alternative approach
+                info = ticker.info
+                if info and 'regularMarketPrice' in info:
+                    raw_price = float(info['regularMarketPrice'])
+                    self._last_known_price = raw_price
+                    return self._calculate_prices(raw_price)
+                # Return last known price if available
+                if self._last_known_price:
+                    return self._calculate_prices(self._last_known_price)
                 return None
 
             raw_price = float(data['Close'].iloc[-1])
+            self._last_known_price = raw_price
 
             return self._calculate_prices(raw_price)
 
         except Exception as e:
             print(f"Error fetching copper price: {e}")
+            # Return last known price on error
+            if self._last_known_price:
+                return self._calculate_prices(self._last_known_price)
             return None
 
     def get_historical_prices(self, period='1mo'):

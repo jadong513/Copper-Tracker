@@ -9,14 +9,23 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark">
+    <nav class="navbar navbar-light bg-white shadow-sm">
         <div class="container">
-            <span class="navbar-brand mb-0 h1">Copper Price Tracker</span>
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Gulf Coast Supply" height="50" class="me-3" onerror="this.style.display='none'">
+                <span class="brand-text">Copper Price Tracker</span>
+            </a>
             <span class="navbar-text" id="last-updated">Loading...</span>
         </div>
     </nav>
 
     <div class="container mt-4">
+        <!-- Error Banner -->
+        <div id="error-banner" class="alert alert-danger alert-dismissible fade show d-none" role="alert">
+            <strong>Connection Issue:</strong> <span id="error-message">Unable to fetch price data. Retrying...</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
         <!-- Alert Banner -->
         <div id="alert-banner" class="alert alert-warning alert-dismissible fade show d-none" role="alert">
             <strong>Price Alert!</strong> <span id="alert-message"></span>
